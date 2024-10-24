@@ -89,10 +89,13 @@ async function fetchAndInsertNews(page = 1, attempts = 0) {
 
 async function postTweet(dataToPost) {
   const tweetText = trimTweet(dataToPost.text);
-  const imageUrl = dataToPost.image_url; // Replace with your image URL
+  const imageUrl = dataToPost.image_url;
   const imagesDir = path.join(__dirname, '..', 'images');
   fs.mkdirSync(imagesDir, { recursive: true });
-  const localPath = path.join(imagesDir, 'image.jpg');
+
+  // Create a unique file name for each image (e.g., using the news URL)
+  const uniqueFileName = `image-${new Date().getTime()}.jpg`;
+  const localPath = path.join(imagesDir, uniqueFileName);
 
   // Download the image
   try {
@@ -101,13 +104,11 @@ async function postTweet(dataToPost) {
     throw new Error('Error downloading the image.' + error.message);
   }
 
-  // Post the tweet and media
-  const mediaId = await twitterClient.v1.uploadMedia(
-    path.join(__dirname, '../images/image.jpg')
-  );
+  // Upload the media to Twitter
+  const mediaId = await twitterClient.v1.uploadMedia(localPath);
 
-  // Delete the image
-  await deleteImage();
+  // Delete the image after upload to free up space
+  await deleteImage(localPath);
 
   // Post the tweet
   let result = await twitterClient.v2.tweetThread([
@@ -134,10 +135,9 @@ async function downloadImage(url, localPath) {
   });
 }
 
-async function deleteImage() {
-  const imagesDir = path.join(__dirname, '../images/image.jpg');
-  if (fs.existsSync(imagesDir)) {
-    fs.unlinkSync(imagesDir);
+async function deleteImage(filePath) {
+  if (fs.existsSync(filePath)) {
+    fs.unlinkSync(filePath);
   }
 }
 
